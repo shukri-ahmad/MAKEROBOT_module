@@ -2,24 +2,166 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Dynamic Tutorial Library</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MAKEROBOT MODULE</title>
   <style>
-    body { font-family: sans-serif; background: #f4f6f8; padding: 2rem; }
-    .catalog { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 1.5rem; }
-    .card { background: #fff; padding: 1rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); text-align: center; }
-    .card img { width: 100%; height: 180px; object-fit: cover; border-radius: 4px; }
-    .btn { display: inline-block; margin-top: 1rem; background: #1a73e8; color: #fff; padding: 0.5rem 1rem; text-decoration: none; border-radius: 4px; }
-    .loading { text-align: center; font-size: 1.2rem; color: #666; }
+    body { 
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+      background: #0f172a; /* Dark sleek background for realistic lighting */
+      margin: 0; 
+      padding: 0; 
+      color: #fff;
+    }
+
+    /* Header styling with custom logo */
+    header {
+      background: #1e293b;
+      padding: 1.5rem 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 15px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+      border-bottom: 4px solid #d92525;
+    }
+
+    header img {
+      height: 65px;
+      width: auto;
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: 2rem;
+      letter-spacing: 1px;
+      color: #f8fafc;
+      text-transform: uppercase;
+    }
+
+    /* Main Container */
+    .container {
+      max-width: 1200px;
+      margin: 3rem auto;
+      padding: 0 1.5rem;
+    }
+
+    /* 3D Catalog Grid */
+    .catalog { 
+      display: grid; 
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); 
+      gap: 3rem 2rem; 
+      perspective: 1000px; /* Gives realistic 3D perspective */
+    }
+
+    /* 3D Book Container */
+    .book-card {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-decoration: none;
+      color: inherit;
+    }
+
+    /* Realistic 3D Book Styling */
+    .book-cover-wrapper {
+      position: relative;
+      width: 190px;
+      height: 260px;
+      background: #ffffff;
+      border-radius: 2px 8px 8px 2px;
+      box-shadow: 
+        -5px 5px 15px rgba(0, 0, 0, 0.5), /* Drop shadow on floor */
+        inset 12px 0 15px -5px rgba(0, 0, 0, 0.4); /* Spine crease effect */
+      transform: rotateY(-10deg) rotateX(5deg);
+      transform-style: preserve-3d;
+      transition: transform 0.4s ease, box-shadow 0.4s ease;
+      cursor: pointer;
+    }
+
+    /* Book Spine Highlight */
+    .book-cover-wrapper::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 12px;
+      height: 100%;
+      background: linear-gradient(90deg, rgba(255,255,255,0.4) 0%, rgba(0,0,0,0.2) 100%);
+      z-index: 3;
+      border-radius: 2px 0 0 2px;
+    }
+
+    /* Simulated Paper Pages Effect (Right Side Edge) */
+    .book-cover-wrapper::after {
+      content: '';
+      position: absolute;
+      top: 3px;
+      right: -8px;
+      width: 8px;
+      height: calc(100% - 6px);
+      background: linear-gradient(90deg, #e2e8f0 0%, #cbd5e1 50%, #f8fafc 100%);
+      border-radius: 0 3px 3px 0;
+      box-shadow: inset 1px 0 2px rgba(0,0,0,0.2);
+    }
+
+    .book-cover-wrapper img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: 2px 6px 6px 2px;
+    }
+
+    /* 3D Hover Animation: Straightens up and floats toward user */
+    .book-card:hover .book-cover-wrapper {
+      transform: rotateY(0deg) rotateX(0deg) translateY(-10px) scale(1.05);
+      box-shadow: 
+        0 20px 30px rgba(0, 0, 0, 0.6), 
+        inset 6px 0 10px -3px rgba(0, 0, 0, 0.3);
+    }
+
+    /* Book Meta Details */
+    .book-title {
+      margin-top: 1.2rem;
+      font-size: 1.05rem;
+      font-weight: 600;
+      text-align: center;
+      color: #f1f5f9;
+      max-width: 200px;
+    }
+
+    .book-pages-badge {
+      margin-top: 0.4rem;
+      font-size: 0.8rem;
+      background: #2563eb;
+      color: #fff;
+      padding: 3px 10px;
+      border-radius: 12px;
+      font-weight: bold;
+    }
+
+    .loading { 
+      text-align: center; 
+      font-size: 1.2rem; 
+      color: #94a3b8; 
+      margin-top: 3rem;
+    }
   </style>
 </head>
 <body>
 
-  <h1>📚 Tutorial Library</h1>
-  <div id="status" class="loading">Fetching latest tutorials from Google Drive...</div>
-  <div class="catalog" id="catalog-container"></div>
+  <header>
+    <!-- Replace 'logo.png' with your image path in the repository -->
+    <img src="logo.png" alt="MAKEROBOT Logo">
+    <h1>MAKEROBOT MODULE</h1>
+  </header>
+
+  <div class="container">
+    <div id="status" class="loading">Fetching books from library...</div>
+    <div class="catalog" id="catalog-container"></div>
+  </div>
 
   <script>
-    // Updated Google Apps Script Web App URL
     const API_URL = "https://script.google.com/macros/s/AKfycbw1WiqEpzwqONQmFxkxYwpNDQ7XF7b0gcFOQa39goXB8d4OGZvgjbVF2oiVDODg1yBF/exec";
 
     fetch(API_URL)
@@ -28,22 +170,24 @@
         document.getElementById('status').style.display = 'none';
         const container = document.getElementById('catalog-container');
 
-        // Store tutorial image data in browser session memory
         sessionStorage.setItem('tutorials_data', JSON.stringify(data));
 
         data.forEach((tutorial, index) => {
-          const card = document.createElement('div');
-          card.className = 'card';
+          const card = document.createElement('a');
+          card.className = 'book-card';
+          card.href = `viewer.html?id=${index}`;
           card.innerHTML = `
-            <img src="${tutorial.coverUrl}" alt="${tutorial.title}">
-            <h3>${tutorial.title}</h3>
-            <a class="btn" href="viewer.html?id=${index}">Open Interactive Book (${tutorial.pages.length} Pages)</a>
+            <div class="book-cover-wrapper">
+              <img src="${tutorial.coverUrl}" alt="${tutorial.title}">
+            </div>
+            <div class="book-title">${tutorial.title}</div>
+            <div class="book-pages-badge">${tutorial.pages.length} Pages</div>
           `;
           container.appendChild(card);
         });
       })
       .catch(err => {
-        document.getElementById('status').innerText = 'Failed to load tutorials. Make sure Google Apps Script is deployed with access set to "Anyone".';
+        document.getElementById('status').innerText = 'Failed to load library modules. Please ensure your Google Apps Script is active.';
       });
   </script>
 
