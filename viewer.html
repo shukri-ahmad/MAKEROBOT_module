@@ -110,7 +110,7 @@
       cursor: grabbing;
     }
 
-    /* Fixed Center Origin Zoom Container */
+    /* Centered Zoom Container */
     #zoom-wrapper {
       transition: transform 0.1s ease-out;
       transform-origin: 50% 50%;
@@ -135,12 +135,12 @@
       pointer-events: none;
     }
 
-    /* Disable flipping interactions while zoomed */
+    /* Disable flipping interactions while zoomed in */
     .zoomed-no-flip {
       pointer-events: none !important;
     }
 
-    /* Side Floating Navigation Buttons */
+    /* Floating Side Controls */
     .side-nav-btn {
       position: absolute;
       top: 50%;
@@ -175,7 +175,7 @@
       right: 15px;
     }
 
-    /* Footer Bar (Zoom Only) */
+    /* Footer Controls */
     .footer-bar {
       height: 60px;
       background: #1f2937;
@@ -304,8 +304,9 @@
         pageHeight = Math.min(stageHeight * 0.92, 800);
         pageWidth = Math.min(stageWidth * 0.95, Math.round(pageHeight * (moduleMeta.width / moduleMeta.height)));
       } else {
+        // Single page portrait dimension fitting
         pageHeight = Math.min(stageHeight * 0.92, 800);
-        pageWidth = Math.round(pageHeight * (moduleMeta.width / moduleMeta.height));
+        pageWidth = Math.min(stageWidth * 0.9, Math.round(pageHeight * (moduleMeta.width / moduleMeta.height)));
       }
 
       return { pageWidth, pageHeight, isMobile };
@@ -336,7 +337,7 @@
         height: pageHeight,
         size: 'fixed',
         showCover: true,         
-        usePortrait: isMobile || moduleMeta.isLandscape,
+        usePortrait: true, // Forces single-page view for portrait modules as well
         drawShadow: true,
         maxShadowOpacity: 0.6,
         mobileScrollSupport: true
@@ -392,7 +393,7 @@
     document.addEventListener('webkitfullscreenchange', updateLayoutSize);
     window.addEventListener('resize', updateLayoutSize);
 
-    // --- CENTERED ZOOM, PAN & DISABLING PAGE FLIP ---
+    // --- ZOOM, PAN & DISABLING PAGE FLIP ---
     const stage = document.getElementById('book-stage');
 
     function changeZoom(amount) {
@@ -421,10 +422,10 @@
 
       if (currentZoom > 1) {
         stage.classList.add('can-pan');
-        bookContainer.classList.add('zoomed-no-flip'); // Disable book flip actions when zoomed in
+        bookContainer.classList.add('zoomed-no-flip');
       } else {
         stage.classList.remove('can-pan', 'is-panning');
-        bookContainer.classList.remove('zoomed-no-flip'); // Re-enable book flip actions at 100%
+        bookContainer.classList.remove('zoomed-no-flip');
       }
     }
 
