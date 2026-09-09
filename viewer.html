@@ -135,7 +135,7 @@
       pointer-events: none;
     }
 
-    /* Disable flipping interactions while zoomed in */
+    /* Disable flipping interactions while zoomed or pinching */
     .zoomed-no-flip {
       pointer-events: none !important;
     }
@@ -145,10 +145,10 @@
       position: absolute;
       top: 50%;
       transform: translateY(-50%);
-      background: rgba(37, 99, 235, 0.45); /* Semi-transparent blue */
+      background: rgba(37, 99, 235, 0.45);
       color: rgba(255, 255, 255, 0.85);
       border: 1px solid rgba(255, 255, 255, 0.2);
-      backdrop-filter: blur(4px); /* Sleek glass blur effect */
+      backdrop-filter: blur(4px);
       width: 46px;
       height: 46px;
       border-radius: 50%;
@@ -164,7 +164,7 @@
     }
 
     .side-nav-btn:hover {
-      background: rgba(29, 78, 216, 0.9); /* Solid on hover */
+      background: rgba(29, 78, 216, 0.9);
       color: #ffffff;
       transform: translateY(-50%) scale(1.1);
     }
@@ -235,7 +235,7 @@
   </header>
 
   <div class="book-stage" id="book-stage">
-    <!-- Semi-Transparent Side Nav Buttons -->
+    <!-- Floating Side Nav Buttons -->
     <button class="side-nav-btn side-nav-prev" onclick="pageFlip.flipPrev()" title="Previous Page">❮</button>
     <button class="side-nav-btn side-nav-next" onclick="pageFlip.flipNext()" title="Next Page">❯</button>
 
@@ -259,6 +259,7 @@
     let panX = 0;
     let panY = 0;
     let isPanning = false;
+    let isPinching = false; // Flag to lock page flipping during pinch gestures
     let startX = 0;
     let startY = 0;
     let initialPinchDistance = null;
@@ -394,14 +395,14 @@
     document.addEventListener('webkitfullscreenchange', updateLayoutSize);
     window.addEventListener('resize', updateLayoutSize);
 
-    // --- ZOOM, PAN & AUTO-CENTER LOGIC ---
+    // --- UNIFIED ZOOM, PAN & PINCH LOGIC ---
     const stage = document.getElementById('book-stage');
 
     function changeZoom(amount) {
       currentZoom = Math.min(Math.max(1, currentZoom + amount), 3);
       if (currentZoom <= 1) {
         currentZoom = 1;
-        panX = 0; // Force exact center reset
+        panX = 0;
         panY = 0;
       }
       applyTransform();
@@ -409,7 +410,7 @@
 
     function resetZoom() {
       currentZoom = 1;
-      panX = 0; // Force exact center reset
+      panX = 0;
       panY = 0;
       applyTransform();
     }
@@ -419,8 +420,7 @@
       const zoomText = document.getElementById('zoom-level');
       const bookContainer = document.getElementById('book');
       
-      // Auto-lock pan coordinates back to origin if zoom drops to 1
-      if (currentZoom === 1) {
+      if (currentZoom === 1 && !isPinching) {
         panX = 0;
         panY = 0;
       }
@@ -428,9 +428,9 @@
       zoomWrapper.style.transform = `translate3d(${panX}px, ${panY}px, 0px) scale(${currentZoom})`;
       zoomText.innerText = `${Math.round(currentZoom * 100)}%`;
 
-      if (currentZoom > 1) {
+      if (currentZoom > 1 || isPinching) {
         stage.classList.add('can-pan');
-        bookContainer.classList.add('zoomed-no-flip');
+        bookContainer.classList.add('zoomed-no-flip'); // Lock page flip during zoom/pinch
       } else {
         stage.classList.remove('can-pan', 'is-panning');
         bookContainer.classList.remove('zoomed-no-flip');
@@ -446,17 +446,21 @@
 
     stage.addEventListener('touchstart', (e) => {
       if (e.touches.length === 2) {
+        // Lock page flip immediately on 2-finger touch
+        isPinching = true;
         initialPinchDistance = getTouchDistance(e);
+        applyTransform();
       } else if (e.touches.length === 1 && currentZoom > 1) {
         isPanning = true;
         stage.classList.add('is-panning');
         startX = e.touches[0].clientX - panX;
         startY = e.touches[0].clientY - panY;
       }
-    });
+    }, { passive: false });
 
     stage.addEventListener('touchmove', (e) => {
       if (e.touches.length === 2 && initialPinchDistance) {
+        e.preventDefault(); // Stop native page scrolling/flipping while pinching
         const newDistance = getTouchDistance(e);
         const factor = newDistance / initialPinchDistance;
         currentZoom = Math.min(Math.max(1, currentZoom * (factor > 1 ? 1.03 : 0.97)), 3);
@@ -467,13 +471,17 @@
         panY = e.touches[0].clientY - startY;
         applyTransform();
       }
-    });
+    }, { passive: false });
 
     stage.addEventListener('touchend', (e) => {
-      if (e.touches.length < 2) initialPinchDistance = null;
+      if (e.touches.length < 2) {
+        initialPinchDistance = null;
+      }
       if (e.touches.length === 0) {
         isPanning = false;
+        isPinching = false;
         stage.classList.remove('is-panning');
+        applyTransform(); // Re-evaluates pointer events on release
       }
     });
 
