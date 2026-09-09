@@ -7,21 +7,21 @@
   <style>
     body { 
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
-      background: #f4f6f9; 
+      background: #090d16; /* Sleek dark black background */
       margin: 0; 
       padding: 0; 
-      color: #333;
+      color: #f3f4f6;
     }
 
-    /* Header styling with custom logo */
+    /* Header styling with logo */
     header {
-      background: #ffffff;
+      background: #111827;
       padding: 1.2rem 2rem;
       display: flex;
       align-items: center;
       justify-content: center;
       gap: 15px;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
       border-bottom: 4px solid #d92525;
     }
 
@@ -34,7 +34,7 @@
       margin: 0;
       font-size: 1.8rem;
       letter-spacing: 1px;
-      color: #1a2a3a;
+      color: #ffffff;
       text-transform: uppercase;
     }
 
@@ -52,27 +52,28 @@
     }
 
     .card { 
-      background: #fff; 
+      background: #1f2937; 
       border-radius: 8px; 
       overflow: hidden;
-      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.06); 
-      transition: transform 0.2s ease, box-shadow 0.2s ease;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4); 
+      transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
       display: flex;
       flex-direction: column;
       justify-content: space-between;
-      border: 1px solid #e2e8f0;
+      border: 1px solid #374151;
     }
 
     .card:hover {
       transform: translateY(-4px);
-      box-shadow: 0 8px 18px rgba(0, 0, 0, 0.12);
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.6);
+      border-color: #2563eb;
     }
 
     .card img { 
       width: 100%; 
       height: 200px; 
       object-fit: cover; 
-      border-bottom: 1px solid #eee;
+      border-bottom: 1px solid #374151;
     }
 
     .card-body {
@@ -87,7 +88,7 @@
     .card h3 {
       margin: 0 0 1rem 0;
       font-size: 1.1rem;
-      color: #1f2937;
+      color: #f9fafb;
     }
 
     .btn { 
@@ -109,7 +110,7 @@
     .loading { 
       text-align: center; 
       font-size: 1.2rem; 
-      color: #64748b; 
+      color: #9ca3af; 
       margin-top: 3rem;
     }
   </style>
