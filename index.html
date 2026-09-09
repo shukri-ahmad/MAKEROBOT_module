@@ -7,13 +7,13 @@
   <style>
     body { 
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
-      background: #090d16; /* Sleek dark black background */
+      background: #090d16; 
       margin: 0; 
       padding: 0; 
       color: #f3f4f6;
     }
 
-    /* Header styling with logo */
+    /* Header styling */
     header {
       background: #111827;
       padding: 1.2rem 2rem;
@@ -44,11 +44,12 @@
       padding: 0 1rem;
     }
 
-    /* Clean Card Grid */
+    /* Responsive Grid */
     .catalog { 
       display: grid; 
-      grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); 
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); 
       gap: 1.5rem; 
+      align-items: start;
     }
 
     .card { 
@@ -69,11 +70,23 @@
       border-color: #2563eb;
     }
 
+    /* Image Wrapper preserving natural aspect ratio */
+    .img-wrapper {
+      width: 100%;
+      background: #0f172a;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      border-bottom: 1px solid #374151;
+      min-height: 180px;
+    }
+
     .card img { 
       width: 100%; 
-      height: 200px; 
-      object-fit: cover; 
-      border-bottom: 1px solid #374151;
+      height: auto;
+      max-height: 280px;
+      object-fit: contain; 
+      display: block;
     }
 
     .card-body {
@@ -142,7 +155,9 @@
           const card = document.createElement('div');
           card.className = 'card';
           card.innerHTML = `
-            <img src="${tutorial.coverUrl}" alt="${tutorial.title}">
+            <div class="img-wrapper">
+              <img src="${tutorial.coverUrl}" alt="${tutorial.title}">
+            </div>
             <div class="card-body">
               <h3>${tutorial.title}</h3>
               <a class="btn" href="viewer.html?id=${index}">Open Module (${tutorial.pages.length} Pages)</a>
