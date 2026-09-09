@@ -18,7 +18,7 @@
       font-family: sans-serif;
       overflow: hidden;
       user-select: none;
-      touch-action: none; /* Prevents default browser interference with pinch/pan */
+      touch-action: none;
     }
 
     header {
@@ -30,6 +30,12 @@
       align-items: center;
       border-bottom: 2px solid #d92525;
       z-index: 10;
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
     }
 
     header a {
@@ -53,12 +59,34 @@
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
-      max-width: 50%;
+      max-width: 40vw;
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 12px;
     }
 
     #page-counter {
       color: #9ca3af;
       font-size: 0.85rem;
+    }
+
+    .fullscreen-btn {
+      background: #374151;
+      color: white;
+      border: 1px solid #4b5563;
+      padding: 6px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: bold;
+      font-size: 0.85rem;
+      transition: background 0.2s;
+    }
+
+    .fullscreen-btn:hover {
+      background: #4b5563;
     }
 
     .book-stage {
@@ -173,9 +201,14 @@
 <body>
 
   <header>
-    <a href="index.html">← Back to Catalog</a>
-    <span id="title">Loading...</span>
-    <span id="page-counter">Page 1</span>
+    <div class="header-left">
+      <a href="index.html">← Back to Catalog</a>
+      <span id="title">Loading...</span>
+    </div>
+    <div class="header-right">
+      <span id="page-counter">Page 1</span>
+      <button class="fullscreen-btn" id="fullscreen-btn" onclick="toggleFullscreen()" title="Toggle Fullscreen">⛶ Fullscreen</button>
+    </div>
   </header>
 
   <div class="book-stage" id="book-stage">
@@ -255,13 +288,11 @@
       const stageHeight = window.innerHeight - 130;
       const stageWidth = window.innerWidth - 20;
 
-      // Detect Smartphone Screen (< 768px wide)
       const isMobile = window.innerWidth < 768;
 
       let pageWidth, pageHeight;
 
       if (isMobile) {
-        // Force Single Page View for Smartphones
         pageWidth = Math.min(stageWidth * 0.95, 450);
         pageHeight = Math.min(stageHeight * 0.9, Math.round(pageWidth * (origHeight / origWidth)));
       } else if (isLandscape) {
@@ -272,13 +303,12 @@
         pageWidth = Math.round(pageHeight * (origWidth / origHeight));
       }
 
-      // Initialize PageFlip Engine
       pageFlip = new St.PageFlip(bookContainer, {
         width: pageWidth,
         height: pageHeight,
         size: 'fixed',
         showCover: true,         
-        usePortrait: isMobile || isLandscape, // Force 1-page mode on mobile devices or landscape modules
+        usePortrait: isMobile || isLandscape,
         drawShadow: true,
         maxShadowOpacity: 0.6,
         mobileScrollSupport: true
@@ -297,6 +327,36 @@
         if (e.key === 'ArrowRight') pageFlip.flipNext();
       });
     }
+
+    // --- FULLSCREEN FUNCTIONALITY ---
+    function toggleFullscreen() {
+      const fsBtn = document.getElementById('fullscreen-btn');
+      if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+        if (document.documentElement.requestFullscreen) {
+          document.documentElement.requestFullscreen();
+        } else if (document.documentElement.webkitRequestFullscreen) { // Safari support
+          document.documentElement.webkitRequestFullscreen();
+        }
+        fsBtn.innerText = 'Exit Fullscreen';
+      } else {
+        if (document.exitFullscreen) {
+          document.exitFullscreen();
+        } else if (document.webkitExitFullscreen) {
+          document.webkitExitFullscreen();
+        }
+        fsBtn.innerText = '⛶ Fullscreen';
+      }
+    }
+
+    // Update button text if user exits fullscreen using Esc key
+    document.addEventListener('fullscreenchange', () => {
+      const fsBtn = document.getElementById('fullscreen-btn');
+      if (!document.fullscreenElement) {
+        fsBtn.innerText = '⛶ Fullscreen';
+      } else {
+        fsBtn.innerText = 'Exit Fullscreen';
+      }
+    });
 
     // --- ZOOM & PAN & PINCH LOGIC ---
     const stage = document.getElementById('book-stage');
@@ -338,13 +398,10 @@
       );
     }
 
-    // Touch Event Handlers for Panning & Pinching
     stage.addEventListener('touchstart', (e) => {
       if (e.touches.length === 2) {
-        // Initialize Pinch-to-Zoom
         initialPinchDistance = getTouchDistance(e);
       } else if (e.touches.length === 1 && currentZoom > 1) {
-        // Initialize Drag-to-Pan
         isPanning = true;
         stage.classList.add('is-panning');
         startX = e.touches[0].clientX - panX;
@@ -354,14 +411,12 @@
 
     stage.addEventListener('touchmove', (e) => {
       if (e.touches.length === 2 && initialPinchDistance) {
-        // Handle Pinch Gesture
         const newDistance = getTouchDistance(e);
         const factor = newDistance / initialPinchDistance;
         currentZoom = Math.min(Math.max(1, currentZoom * (factor > 1 ? 1.03 : 0.97)), 3);
         initialPinchDistance = newDistance;
         applyTransform();
       } else if (e.touches.length === 1 && isPanning && currentZoom > 1) {
-        // Handle Pan Gesture
         panX = e.touches[0].clientX - startX;
         panY = e.touches[0].clientY - startY;
         applyTransform();
@@ -376,7 +431,6 @@
       }
     });
 
-    // Mouse Events for Desktop
     stage.addEventListener('mousedown', (e) => {
       if (currentZoom <= 1) return;
       isPanning = true;
