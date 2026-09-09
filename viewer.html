@@ -235,7 +235,7 @@
   </header>
 
   <div class="book-stage" id="book-stage">
-    <!-- Symmetrical Floating Side Nav Buttons -->
+    <!-- Floating Side Nav Buttons -->
     <button class="side-nav-btn side-nav-prev" onclick="handleFlip('prev')" title="Previous Page">❮</button>
     <button class="side-nav-btn side-nav-next" onclick="handleFlip('next')" title="Next Page">❯</button>
 
@@ -342,8 +342,8 @@
         usePortrait: true,
         drawShadow: true,
         maxShadowOpacity: 0.6,
-        flippingTime: 600,       // Synchronizes flip animation speed for both directions
-        swipeDistance: 30,       // Symmetrical swipe threshold
+        flippingTime: 600,
+        swipeDistance: 30,
         mobileScrollSupport: true
       });
 
@@ -361,13 +361,13 @@
       });
     }
 
-    // Unified Symmetrical Flip Handler
+    // Fixed Page Flip Handler (Standard method call works reliably across all pages)
     function handleFlip(direction) {
       if (!pageFlip || currentZoom > 1) return;
       if (direction === 'prev') {
-        pageFlip.flipPrev('top'); // Mirrored top-corner peel matching next page motion
+        pageFlip.flipPrev();
       } else {
-        pageFlip.flipNext('top');
+        pageFlip.flipNext();
       }
     }
 
