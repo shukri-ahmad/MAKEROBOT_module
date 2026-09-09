@@ -90,6 +90,7 @@
       background: #4b5563;
     }
 
+    /* Stage centered with absolute viewport flex centering */
     .book-stage {
       flex: 1;
       width: 100%;
@@ -110,9 +111,10 @@
       cursor: grabbing;
     }
 
+    /* Fixed Center Origin Zoom Container */
     #zoom-wrapper {
       transition: transform 0.1s ease-out;
-      transform-origin: center center;
+      transform-origin: 50% 50%; /* Force exact center zooming */
       display: flex;
       justify-content: center;
       align-items: center;
@@ -275,8 +277,8 @@
 
     function calculatePageDimensions() {
       const stage = document.getElementById('book-stage');
-      const stageHeight = stage.clientHeight - 20; // Fit available stage height
-      const stageWidth = stage.clientWidth - 20;   // Fit available stage width
+      const stageHeight = stage.clientHeight - 20;
+      const stageWidth = stage.clientWidth - 20;
 
       const isMobile = window.innerWidth < 768;
       let pageWidth, pageHeight;
@@ -297,7 +299,7 @@
 
     function initBookViewer() {
       const bookContainer = document.getElementById('book');
-      bookContainer.innerHTML = ''; // Clear container
+      bookContainer.innerHTML = '';
 
       tutorial.pages.forEach((pageUrl, idx) => {
         const page = document.createElement('div');
@@ -342,7 +344,6 @@
 
     // --- FULLSCREEN LOGIC ---
     function toggleFullscreen() {
-      const fsBtn = document.getElementById('fullscreen-btn');
       if (!document.fullscreenElement && !document.webkitFullscreenElement) {
         if (document.documentElement.requestFullscreen) {
           document.documentElement.requestFullscreen();
@@ -358,7 +359,6 @@
       }
     }
 
-    // Auto resize book to fill screen when fullscreen state changes
     function updateLayoutSize() {
       const fsBtn = document.getElementById('fullscreen-btn');
       if (document.fullscreenElement || document.webkitFullscreenElement) {
@@ -369,9 +369,7 @@
 
       resetZoom();
 
-      // Recalculate dimensions for full screen fit
       if (pageFlip) {
-        const { pageWidth, pageHeight } = calculatePageDimensions();
         pageFlip.updateFromHtml(document.querySelectorAll('.page-sheet'));
       }
     }
@@ -380,7 +378,7 @@
     document.addEventListener('webkitfullscreenchange', updateLayoutSize);
     window.addEventListener('resize', updateLayoutSize);
 
-    // --- ZOOM, PAN & PINCH LOGIC ---
+    // --- CENTERED ZOOM & PAN LOGIC ---
     const stage = document.getElementById('book-stage');
 
     function changeZoom(amount) {
@@ -403,7 +401,8 @@
       const zoomWrapper = document.getElementById('zoom-wrapper');
       const zoomText = document.getElementById('zoom-level');
       
-      zoomWrapper.style.transform = `translate(${panX}px, ${panY}px) scale(${currentZoom})`;
+      // Kept centered in place
+      zoomWrapper.style.transform = `translate3d(${panX}px, ${panY}px, 0px) scale(${currentZoom})`;
       zoomText.innerText = `${Math.round(currentZoom * 100)}%`;
 
       if (currentZoom > 1) {
@@ -420,12 +419,10 @@
       );
     }
 
-    // Touch events for panning only when zoomed in
     stage.addEventListener('touchstart', (e) => {
       if (e.touches.length === 2) {
         initialPinchDistance = getTouchDistance(e);
       } else if (e.touches.length === 1 && currentZoom > 1) {
-        // Only pan if zoomed in above 100%
         isPanning = true;
         stage.classList.add('is-panning');
         startX = e.touches[0].clientX - panX;
@@ -455,9 +452,8 @@
       }
     });
 
-    // Mouse events for panning desktop
     stage.addEventListener('mousedown', (e) => {
-      if (currentZoom <= 1) return; // Prevent panning at default zoom
+      if (currentZoom <= 1) return;
       isPanning = true;
       stage.classList.add('is-panning');
       startX = e.clientX - panX;
