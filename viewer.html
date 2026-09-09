@@ -7,6 +7,7 @@
   <!-- Page Flip JS Library -->
   <script src="https://cdn.jsdelivr.net/npm/page-flip/dist/js/page-flip.browser.js"></script>
   <style>
+    * { box-sizing: border-box; }
     body {
       margin: 0;
       background: #111827;
@@ -19,7 +20,8 @@
     }
 
     header {
-      padding: 10px 20px;
+      height: 60px;
+      padding: 0 20px;
       background: #1f2937;
       display: flex;
       justify-content: space-between;
@@ -33,8 +35,9 @@
       text-decoration: none;
       font-weight: bold;
       background: #374151;
-      padding: 6px 12px;
+      padding: 6px 14px;
       border-radius: 4px;
+      font-size: 0.9rem;
     }
 
     header a:hover {
@@ -52,23 +55,24 @@
       font-size: 0.9rem;
     }
 
-    /* Container for the 3D Book */
+    /* Stage centered with reserved height for navigation controls */
     .book-stage {
-      flex: 1;
+      height: calc(100vh - 120px);
+      width: 100%;
       display: flex;
       justify-content: center;
       align-items: center;
-      padding: 20px;
       background: radial-gradient(circle, #1f2937 0%, #0b0f19 100%);
+      overflow: hidden;
     }
 
-    /* 3D Shadows & Page Styling */
+    /* Individual Page Container */
     .page-sheet {
-      background-color: #fff;
-      box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.1);
+      background-color: #ffffff;
       display: flex;
       align-items: center;
       justify-content: center;
+      box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.15);
     }
 
     .page-sheet img {
@@ -77,14 +81,15 @@
       object-fit: contain;
     }
 
-    /* Controls */
-    .nav-controls {
-      position: absolute;
-      bottom: 20px;
-      left: 50%;
-      transform: translateX(-50%);
+    /* Fixed Bottom Control Bar */
+    .footer-bar {
+      height: 60px;
+      background: #1f2937;
       display: flex;
-      gap: 15px;
+      justify-content: center;
+      align-items: center;
+      gap: 20px;
+      border-top: 1px solid #374151;
       z-index: 10;
     }
 
@@ -92,11 +97,12 @@
       background: #2563eb;
       color: white;
       border: none;
-      padding: 8px 16px;
-      border-radius: 20px;
+      padding: 8px 20px;
+      border-radius: 6px;
       cursor: pointer;
       font-weight: bold;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+      font-size: 0.9rem;
+      transition: background 0.2s;
     }
 
     .nav-btn:hover {
@@ -116,9 +122,9 @@
     <div id="book"></div>
   </div>
 
-  <div class="nav-controls">
-    <button class="nav-btn" onclick="pageFlip.flipPrev()">← Prev Page</button>
-    <button class="nav-btn" onclick="pageFlip.flipNext()">Next Page →</button>
+  <div class="footer-bar">
+    <button class="nav-btn" onclick="pageFlip.flipPrev()">← Previous</button>
+    <button class="nav-btn" onclick="pageFlip.flipNext()">Next →</button>
   </div>
 
   <script>
@@ -134,41 +140,48 @@
       document.getElementById('title').innerText = tutorial.title;
       const bookContainer = document.getElementById('book');
 
-      // Add pages dynamically
+      // Create page elements
       tutorial.pages.forEach((pageUrl, idx) => {
         const page = document.createElement('div');
         page.className = 'page-sheet';
+        // Mark front cover and back cover as hard cover density
+        if (idx === 0 || idx === tutorial.pages.length - 1) {
+          page.setAttribute('data-density', 'hard');
+        } else {
+          page.setAttribute('data-density', 'soft');
+        }
         page.innerHTML = `<img src="${pageUrl}" alt="Page ${idx + 1}">`;
         bookContainer.appendChild(page);
       });
 
-      // Calculate realistic page dimension responsive to screen
-      const screenHeight = window.innerHeight - 140;
-      const pageWidth = Math.min(screenHeight * 0.7, 550);
+      // Calculate container fit dimensions
+      const stageHeight = window.innerHeight - 130;
+      // Single page height and aspect ratio (A4 standard fit)
+      const pageHeight = Math.min(stageHeight, 700);
+      const pageWidth = Math.round(pageHeight * 0.707); 
 
-      // Initialize 3D PageFlip Engine
+      // Initialize 2-Page Spread Book
       pageFlip = new St.PageFlip(bookContainer, {
         width: pageWidth,
-        height: screenHeight,
+        height: pageHeight,
         size: 'fixed',
-        minWidth: 300,
-        maxWidth: 600,
-        minHeight: 400,
-        maxHeight: 800,
-        maxShadowOpacity: 0.5, // Realistic 3D shadow gradient
-        showCover: true,       // Treats page 1 as the front cover
+        showCover: true,         // Front cover opens independently
+        usePortrait: false,       // Force 2-page side-by-side spread on desktop
+        drawShadow: true,
+        maxShadowOpacity: 0.6,
         mobileScrollSupport: true
       });
 
-      // Load pages from HTML elements
       pageFlip.loadFromHTML(document.querySelectorAll('.page-sheet'));
 
-      // Update page counter on flip
+      // Update current displayed page range
       pageFlip.on('flip', (e) => {
-        document.getElementById('page-counter').innerText = `Page ${e.data + 1} of ${tutorial.pages.length}`;
+        const current = e.data + 1;
+        const total = tutorial.pages.length;
+        document.getElementById('page-counter').innerText = `Page ${current} of ${total}`;
       });
 
-      // Keyboard arrow controls
+      // Arrow Key Navigation
       window.addEventListener('keydown', (e) => {
         if (e.key === 'ArrowLeft') pageFlip.flipPrev();
         if (e.key === 'ArrowRight') pageFlip.flipNext();
