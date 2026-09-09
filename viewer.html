@@ -235,9 +235,9 @@
   </header>
 
   <div class="book-stage" id="book-stage">
-    <!-- Floating Side Nav Buttons -->
-    <button class="side-nav-btn side-nav-prev" onclick="pageFlip.flipPrev()" title="Previous Page">❮</button>
-    <button class="side-nav-btn side-nav-next" onclick="pageFlip.flipNext()" title="Next Page">❯</button>
+    <!-- Symmetrical Floating Side Nav Buttons -->
+    <button class="side-nav-btn side-nav-prev" onclick="handleFlip('prev')" title="Previous Page">❮</button>
+    <button class="side-nav-btn side-nav-next" onclick="handleFlip('next')" title="Next Page">❯</button>
 
     <div id="zoom-wrapper">
       <div id="book"></div>
@@ -259,7 +259,7 @@
     let panX = 0;
     let panY = 0;
     let isPanning = false;
-    let isPinching = false; // Flag to lock page flipping during pinch gestures
+    let isPinching = false;
     let startX = 0;
     let startY = 0;
     let initialPinchDistance = null;
@@ -342,6 +342,8 @@
         usePortrait: true,
         drawShadow: true,
         maxShadowOpacity: 0.6,
+        flippingTime: 600,       // Synchronizes flip animation speed for both directions
+        swipeDistance: 30,       // Symmetrical swipe threshold
         mobileScrollSupport: true
       });
 
@@ -354,9 +356,19 @@
       });
 
       window.addEventListener('keydown', (e) => {
-        if (e.key === 'ArrowLeft') pageFlip.flipPrev();
-        if (e.key === 'ArrowRight') pageFlip.flipNext();
+        if (e.key === 'ArrowLeft') handleFlip('prev');
+        if (e.key === 'ArrowRight') handleFlip('next');
       });
+    }
+
+    // Unified Symmetrical Flip Handler
+    function handleFlip(direction) {
+      if (!pageFlip || currentZoom > 1) return;
+      if (direction === 'prev') {
+        pageFlip.flipPrev('top'); // Mirrored top-corner peel matching next page motion
+      } else {
+        pageFlip.flipNext('top');
+      }
     }
 
     // --- FULLSCREEN LOGIC ---
@@ -395,7 +407,7 @@
     document.addEventListener('webkitfullscreenchange', updateLayoutSize);
     window.addEventListener('resize', updateLayoutSize);
 
-    // --- UNIFIED ZOOM, PAN & PINCH LOGIC ---
+    // --- ZOOM, PAN & PINCH LOGIC ---
     const stage = document.getElementById('book-stage');
 
     function changeZoom(amount) {
@@ -430,7 +442,7 @@
 
       if (currentZoom > 1 || isPinching) {
         stage.classList.add('can-pan');
-        bookContainer.classList.add('zoomed-no-flip'); // Lock page flip during zoom/pinch
+        bookContainer.classList.add('zoomed-no-flip');
       } else {
         stage.classList.remove('can-pan', 'is-panning');
         bookContainer.classList.remove('zoomed-no-flip');
@@ -446,7 +458,6 @@
 
     stage.addEventListener('touchstart', (e) => {
       if (e.touches.length === 2) {
-        // Lock page flip immediately on 2-finger touch
         isPinching = true;
         initialPinchDistance = getTouchDistance(e);
         applyTransform();
@@ -460,7 +471,7 @@
 
     stage.addEventListener('touchmove', (e) => {
       if (e.touches.length === 2 && initialPinchDistance) {
-        e.preventDefault(); // Stop native page scrolling/flipping while pinching
+        e.preventDefault();
         const newDistance = getTouchDistance(e);
         const factor = newDistance / initialPinchDistance;
         currentZoom = Math.min(Math.max(1, currentZoom * (factor > 1 ? 1.03 : 0.97)), 3);
@@ -481,7 +492,7 @@
         isPanning = false;
         isPinching = false;
         stage.classList.remove('is-panning');
-        applyTransform(); // Re-evaluates pointer events on release
+        applyTransform();
       }
     });
 
