@@ -140,16 +140,17 @@
       pointer-events: none !important;
     }
 
-    /* Floating Side Controls */
+    /* Semi-Transparent Floating Side Controls */
     .side-nav-btn {
       position: absolute;
       top: 50%;
       transform: translateY(-50%);
-      background: rgba(37, 99, 235, 0.8);
-      color: white;
-      border: none;
-      width: 48px;
-      height: 48px;
+      background: rgba(37, 99, 235, 0.45); /* Semi-transparent blue */
+      color: rgba(255, 255, 255, 0.85);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      backdrop-filter: blur(4px); /* Sleek glass blur effect */
+      width: 46px;
+      height: 46px;
       border-radius: 50%;
       cursor: pointer;
       font-weight: bold;
@@ -158,12 +159,13 @@
       justify-content: center;
       align-items: center;
       z-index: 20;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-      transition: background 0.2s, transform 0.2s;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+      transition: background 0.2s, transform 0.2s, opacity 0.2s;
     }
 
     .side-nav-btn:hover {
-      background: rgba(29, 78, 216, 1);
+      background: rgba(29, 78, 216, 0.9); /* Solid on hover */
+      color: #ffffff;
       transform: translateY(-50%) scale(1.1);
     }
 
@@ -233,7 +235,7 @@
   </header>
 
   <div class="book-stage" id="book-stage">
-    <!-- Floating Side Nav Buttons -->
+    <!-- Semi-Transparent Side Nav Buttons -->
     <button class="side-nav-btn side-nav-prev" onclick="pageFlip.flipPrev()" title="Previous Page">❮</button>
     <button class="side-nav-btn side-nav-next" onclick="pageFlip.flipNext()" title="Next Page">❯</button>
 
@@ -304,7 +306,6 @@
         pageHeight = Math.min(stageHeight * 0.92, 800);
         pageWidth = Math.min(stageWidth * 0.95, Math.round(pageHeight * (moduleMeta.width / moduleMeta.height)));
       } else {
-        // Single page portrait dimension fitting
         pageHeight = Math.min(stageHeight * 0.92, 800);
         pageWidth = Math.min(stageWidth * 0.9, Math.round(pageHeight * (moduleMeta.width / moduleMeta.height)));
       }
@@ -337,7 +338,7 @@
         height: pageHeight,
         size: 'fixed',
         showCover: true,         
-        usePortrait: true, // Forces single-page view for portrait modules as well
+        usePortrait: true,
         drawShadow: true,
         maxShadowOpacity: 0.6,
         mobileScrollSupport: true
@@ -393,13 +394,14 @@
     document.addEventListener('webkitfullscreenchange', updateLayoutSize);
     window.addEventListener('resize', updateLayoutSize);
 
-    // --- ZOOM, PAN & DISABLING PAGE FLIP ---
+    // --- ZOOM, PAN & AUTO-CENTER LOGIC ---
     const stage = document.getElementById('book-stage');
 
     function changeZoom(amount) {
       currentZoom = Math.min(Math.max(1, currentZoom + amount), 3);
-      if (currentZoom === 1) {
-        panX = 0;
+      if (currentZoom <= 1) {
+        currentZoom = 1;
+        panX = 0; // Force exact center reset
         panY = 0;
       }
       applyTransform();
@@ -407,7 +409,7 @@
 
     function resetZoom() {
       currentZoom = 1;
-      panX = 0;
+      panX = 0; // Force exact center reset
       panY = 0;
       applyTransform();
     }
@@ -417,6 +419,12 @@
       const zoomText = document.getElementById('zoom-level');
       const bookContainer = document.getElementById('book');
       
+      // Auto-lock pan coordinates back to origin if zoom drops to 1
+      if (currentZoom === 1) {
+        panX = 0;
+        panY = 0;
+      }
+
       zoomWrapper.style.transform = `translate3d(${panX}px, ${panY}px, 0px) scale(${currentZoom})`;
       zoomText.innerText = `${Math.round(currentZoom * 100)}%`;
 
