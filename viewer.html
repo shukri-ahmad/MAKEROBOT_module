@@ -301,6 +301,7 @@
       let pageWidth, pageHeight;
 
       if (isMobile) {
+        // Enforce Single Page fitting for Smartphone Viewport
         pageWidth = Math.min(stageWidth * 0.95, 480);
         pageHeight = Math.min(stageHeight * 0.95, Math.round(pageWidth * (moduleMeta.height / moduleMeta.width)));
       } else if (moduleMeta.isLandscape) {
@@ -321,25 +322,19 @@
       tutorial.pages.forEach((pageUrl, idx) => {
         const page = document.createElement('div');
         page.className = 'page-sheet';
-        
-        if (idx === 0 || idx === tutorial.pages.length - 1) {
-          page.setAttribute('data-density', 'hard');
-        } else {
-          page.setAttribute('data-density', 'soft');
-        }
-        
         page.innerHTML = `<img src="${pageUrl}" alt="Page ${idx + 1}">`;
         bookContainer.appendChild(page);
       });
 
-      const { pageWidth, pageHeight, isMobile } = calculatePageDimensions();
+      const { pageWidth, pageHeight } = calculatePageDimensions();
 
+      // Configure Engine for Single Page rendering across all screens
       pageFlip = new St.PageFlip(bookContainer, {
         width: pageWidth,
         height: pageHeight,
         size: 'fixed',
-        showCover: true,         
-        usePortrait: true,
+        showCover: false,         // Disables cover offset for strict single-page flow
+        usePortrait: true,        // Force single-page view across smartphone portrait and landscape modes
         drawShadow: true,
         maxShadowOpacity: 0.6,
         flippingTime: 600,
@@ -361,7 +356,6 @@
       });
     }
 
-    // Fixed Page Flip Handler (Standard method call works reliably across all pages)
     function handleFlip(direction) {
       if (!pageFlip || currentZoom > 1) return;
       if (direction === 'prev') {
