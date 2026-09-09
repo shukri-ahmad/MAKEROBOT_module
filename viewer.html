@@ -30,6 +30,7 @@
       align-items: center;
       border-bottom: 2px solid #d92525;
       z-index: 10;
+      flex-shrink: 0;
     }
 
     .header-left {
@@ -90,7 +91,7 @@
     }
 
     .book-stage {
-      height: calc(100vh - 120px);
+      flex: 1;
       width: 100%;
       display: flex;
       justify-content: center;
@@ -110,7 +111,7 @@
     }
 
     #zoom-wrapper {
-      transition: transform 0.05s ease-out;
+      transition: transform 0.1s ease-out;
       transform-origin: center center;
       display: flex;
       justify-content: center;
@@ -143,6 +144,7 @@
       border-top: 1px solid #374151;
       z-index: 10;
       padding: 0 10px;
+      flex-shrink: 0;
     }
 
     .control-group {
@@ -242,6 +244,7 @@
     let startX = 0;
     let startY = 0;
     let initialPinchDistance = null;
+    let moduleMeta = { isLandscape: false, width: 3, height: 4 };
 
     const params = new URLSearchParams(window.location.search);
     const id = parseInt(params.get('id')) || 0;
@@ -256,20 +259,45 @@
       sampleImg.src = tutorial.pages[0];
 
       sampleImg.onload = function() {
-        const isLandscape = this.naturalWidth > this.naturalHeight;
-        initBookViewer(isLandscape, this.naturalWidth, this.naturalHeight);
+        moduleMeta.isLandscape = this.naturalWidth > this.naturalHeight;
+        moduleMeta.width = this.naturalWidth;
+        moduleMeta.height = this.naturalHeight;
+        initBookViewer();
       };
 
       sampleImg.onerror = function() {
-        initBookViewer(false, 3, 4);
+        initBookViewer();
       };
 
     } else {
       window.location.href = 'index.html';
     }
 
-    function initBookViewer(isLandscape, origWidth, origHeight) {
+    function calculatePageDimensions() {
+      const stage = document.getElementById('book-stage');
+      const stageHeight = stage.clientHeight - 20; // Fit available stage height
+      const stageWidth = stage.clientWidth - 20;   // Fit available stage width
+
+      const isMobile = window.innerWidth < 768;
+      let pageWidth, pageHeight;
+
+      if (isMobile) {
+        pageWidth = Math.min(stageWidth * 0.95, 480);
+        pageHeight = Math.min(stageHeight * 0.95, Math.round(pageWidth * (moduleMeta.height / moduleMeta.width)));
+      } else if (moduleMeta.isLandscape) {
+        pageHeight = Math.min(stageHeight * 0.92, 800);
+        pageWidth = Math.min(stageWidth * 0.95, Math.round(pageHeight * (moduleMeta.width / moduleMeta.height)));
+      } else {
+        pageHeight = Math.min(stageHeight * 0.92, 800);
+        pageWidth = Math.round(pageHeight * (moduleMeta.width / moduleMeta.height));
+      }
+
+      return { pageWidth, pageHeight, isMobile };
+    }
+
+    function initBookViewer() {
       const bookContainer = document.getElementById('book');
+      bookContainer.innerHTML = ''; // Clear container
 
       tutorial.pages.forEach((pageUrl, idx) => {
         const page = document.createElement('div');
@@ -285,30 +313,14 @@
         bookContainer.appendChild(page);
       });
 
-      const stageHeight = window.innerHeight - 130;
-      const stageWidth = window.innerWidth - 20;
-
-      const isMobile = window.innerWidth < 768;
-
-      let pageWidth, pageHeight;
-
-      if (isMobile) {
-        pageWidth = Math.min(stageWidth * 0.95, 450);
-        pageHeight = Math.min(stageHeight * 0.9, Math.round(pageWidth * (origHeight / origWidth)));
-      } else if (isLandscape) {
-        pageHeight = Math.min(stageHeight, 600);
-        pageWidth = Math.min(stageWidth, Math.round(pageHeight * (origWidth / origHeight)));
-      } else {
-        pageHeight = Math.min(stageHeight, 700);
-        pageWidth = Math.round(pageHeight * (origWidth / origHeight));
-      }
+      const { pageWidth, pageHeight, isMobile } = calculatePageDimensions();
 
       pageFlip = new St.PageFlip(bookContainer, {
         width: pageWidth,
         height: pageHeight,
         size: 'fixed',
         showCover: true,         
-        usePortrait: isMobile || isLandscape,
+        usePortrait: isMobile || moduleMeta.isLandscape,
         drawShadow: true,
         maxShadowOpacity: 0.6,
         mobileScrollSupport: true
@@ -328,37 +340,47 @@
       });
     }
 
-    // --- FULLSCREEN FUNCTIONALITY ---
+    // --- FULLSCREEN LOGIC ---
     function toggleFullscreen() {
       const fsBtn = document.getElementById('fullscreen-btn');
       if (!document.fullscreenElement && !document.webkitFullscreenElement) {
         if (document.documentElement.requestFullscreen) {
           document.documentElement.requestFullscreen();
-        } else if (document.documentElement.webkitRequestFullscreen) { // Safari support
+        } else if (document.documentElement.webkitRequestFullscreen) {
           document.documentElement.webkitRequestFullscreen();
         }
-        fsBtn.innerText = 'Exit Fullscreen';
       } else {
         if (document.exitFullscreen) {
           document.exitFullscreen();
         } else if (document.webkitExitFullscreen) {
           document.webkitExitFullscreen();
         }
-        fsBtn.innerText = '⛶ Fullscreen';
       }
     }
 
-    // Update button text if user exits fullscreen using Esc key
-    document.addEventListener('fullscreenchange', () => {
+    // Auto resize book to fill screen when fullscreen state changes
+    function updateLayoutSize() {
       const fsBtn = document.getElementById('fullscreen-btn');
-      if (!document.fullscreenElement) {
-        fsBtn.innerText = '⛶ Fullscreen';
-      } else {
+      if (document.fullscreenElement || document.webkitFullscreenElement) {
         fsBtn.innerText = 'Exit Fullscreen';
+      } else {
+        fsBtn.innerText = '⛶ Fullscreen';
       }
-    });
 
-    // --- ZOOM & PAN & PINCH LOGIC ---
+      resetZoom();
+
+      // Recalculate dimensions for full screen fit
+      if (pageFlip) {
+        const { pageWidth, pageHeight } = calculatePageDimensions();
+        pageFlip.updateFromHtml(document.querySelectorAll('.page-sheet'));
+      }
+    }
+
+    document.addEventListener('fullscreenchange', updateLayoutSize);
+    document.addEventListener('webkitfullscreenchange', updateLayoutSize);
+    window.addEventListener('resize', updateLayoutSize);
+
+    // --- ZOOM, PAN & PINCH LOGIC ---
     const stage = document.getElementById('book-stage');
 
     function changeZoom(amount) {
@@ -398,10 +420,12 @@
       );
     }
 
+    // Touch events for panning only when zoomed in
     stage.addEventListener('touchstart', (e) => {
       if (e.touches.length === 2) {
         initialPinchDistance = getTouchDistance(e);
       } else if (e.touches.length === 1 && currentZoom > 1) {
+        // Only pan if zoomed in above 100%
         isPanning = true;
         stage.classList.add('is-panning');
         startX = e.touches[0].clientX - panX;
@@ -431,8 +455,9 @@
       }
     });
 
+    // Mouse events for panning desktop
     stage.addEventListener('mousedown', (e) => {
-      if (currentZoom <= 1) return;
+      if (currentZoom <= 1) return; // Prevent panning at default zoom
       isPanning = true;
       stage.classList.add('is-panning');
       startX = e.clientX - panX;
