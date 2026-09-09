@@ -18,11 +18,12 @@
       font-family: sans-serif;
       overflow: hidden;
       user-select: none;
+      touch-action: none; /* Prevents default browser interference with pinch/pan */
     }
 
     header {
       height: 60px;
-      padding: 0 20px;
+      padding: 0 15px;
       background: #1f2937;
       display: flex;
       justify-content: space-between;
@@ -36,9 +37,9 @@
       text-decoration: none;
       font-weight: bold;
       background: #374151;
-      padding: 6px 14px;
+      padding: 6px 12px;
       border-radius: 4px;
-      font-size: 0.9rem;
+      font-size: 0.85rem;
     }
 
     header a:hover {
@@ -46,14 +47,18 @@
     }
 
     #title {
-      font-size: 1.1rem;
+      font-size: 1rem;
       font-weight: bold;
       color: #f3f4f6;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 50%;
     }
 
     #page-counter {
       color: #9ca3af;
-      font-size: 0.9rem;
+      font-size: 0.85rem;
     }
 
     .book-stage {
@@ -77,7 +82,7 @@
     }
 
     #zoom-wrapper {
-      transition: transform 0.1s ease-out;
+      transition: transform 0.05s ease-out;
       transform-origin: center center;
       display: flex;
       justify-content: center;
@@ -106,33 +111,34 @@
       display: flex;
       justify-content: center;
       align-items: center;
-      gap: 15px;
+      gap: 10px;
       border-top: 1px solid #374151;
       z-index: 10;
+      padding: 0 10px;
     }
 
     .control-group {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 6px;
     }
 
     .divider {
       width: 1px;
-      height: 24px;
+      height: 20px;
       background: #4b5563;
-      margin: 0 5px;
+      margin: 0 3px;
     }
 
     .nav-btn {
       background: #2563eb;
       color: white;
       border: none;
-      padding: 8px 16px;
+      padding: 8px 12px;
       border-radius: 6px;
       cursor: pointer;
       font-weight: bold;
-      font-size: 0.9rem;
+      font-size: 0.85rem;
       transition: background 0.2s;
     }
 
@@ -144,11 +150,11 @@
       background: #374151;
       color: white;
       border: none;
-      padding: 8px 12px;
+      padding: 8px 10px;
       border-radius: 6px;
       cursor: pointer;
       font-weight: bold;
-      font-size: 0.9rem;
+      font-size: 0.85rem;
       transition: background 0.2s;
     }
 
@@ -157,9 +163,9 @@
     }
 
     #zoom-level {
-      font-size: 0.85rem;
+      font-size: 0.8rem;
       color: #d1d5db;
-      min-width: 45px;
+      min-width: 40px;
       text-align: center;
     }
   </style>
@@ -180,7 +186,7 @@
 
   <div class="footer-bar">
     <div class="control-group">
-      <button class="nav-btn" onclick="pageFlip.flipPrev()">← Previous</button>
+      <button class="nav-btn" onclick="pageFlip.flipPrev()">← Prev</button>
       <button class="nav-btn" onclick="pageFlip.flipNext()">Next →</button>
     </div>
 
@@ -202,6 +208,7 @@
     let isPanning = false;
     let startX = 0;
     let startY = 0;
+    let initialPinchDistance = null;
 
     const params = new URLSearchParams(window.location.search);
     const id = parseInt(params.get('id')) || 0;
@@ -212,7 +219,6 @@
     if (tutorial && tutorial.pages.length > 0) {
       document.getElementById('title').innerText = tutorial.title;
       
-      // Auto-detect aspect ratio of page 1
       const sampleImg = new Image();
       sampleImg.src = tutorial.pages[0];
 
@@ -222,7 +228,6 @@
       };
 
       sampleImg.onerror = function() {
-        // Fallback default if detection fails
         initBookViewer(false, 3, 4);
       };
 
@@ -248,27 +253,32 @@
       });
 
       const stageHeight = window.innerHeight - 130;
-      const stageWidth = window.innerWidth - 40;
+      const stageWidth = window.innerWidth - 20;
+
+      // Detect Smartphone Screen (< 768px wide)
+      const isMobile = window.innerWidth < 768;
 
       let pageWidth, pageHeight;
 
-      if (isLandscape) {
-        // Calculate dimensions for Landscape modules
+      if (isMobile) {
+        // Force Single Page View for Smartphones
+        pageWidth = Math.min(stageWidth * 0.95, 450);
+        pageHeight = Math.min(stageHeight * 0.9, Math.round(pageWidth * (origHeight / origWidth)));
+      } else if (isLandscape) {
         pageHeight = Math.min(stageHeight, 600);
         pageWidth = Math.min(stageWidth, Math.round(pageHeight * (origWidth / origHeight)));
       } else {
-        // Calculate dimensions for Portrait modules
         pageHeight = Math.min(stageHeight, 700);
         pageWidth = Math.round(pageHeight * (origWidth / origHeight));
       }
 
-      // Configure PageFlip Engine dynamically
+      // Initialize PageFlip Engine
       pageFlip = new St.PageFlip(bookContainer, {
         width: pageWidth,
         height: pageHeight,
         size: 'fixed',
         showCover: true,         
-        usePortrait: isLandscape, // Use single page view for landscape slides, 2-page spread for portrait
+        usePortrait: isMobile || isLandscape, // Force 1-page mode on mobile devices or landscape modules
         drawShadow: true,
         maxShadowOpacity: 0.6,
         mobileScrollSupport: true
@@ -288,11 +298,11 @@
       });
     }
 
-    // --- ZOOM & PAN LOGIC ---
+    // --- ZOOM & PAN & PINCH LOGIC ---
     const stage = document.getElementById('book-stage');
 
     function changeZoom(amount) {
-      currentZoom = Math.min(Math.max(1, currentZoom + amount), 2.5);
+      currentZoom = Math.min(Math.max(1, currentZoom + amount), 3);
       if (currentZoom === 1) {
         panX = 0;
         panY = 0;
@@ -321,42 +331,71 @@
       }
     }
 
-    function startPan(e) {
+    function getTouchDistance(e) {
+      return Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+    }
+
+    // Touch Event Handlers for Panning & Pinching
+    stage.addEventListener('touchstart', (e) => {
+      if (e.touches.length === 2) {
+        // Initialize Pinch-to-Zoom
+        initialPinchDistance = getTouchDistance(e);
+      } else if (e.touches.length === 1 && currentZoom > 1) {
+        // Initialize Drag-to-Pan
+        isPanning = true;
+        stage.classList.add('is-panning');
+        startX = e.touches[0].clientX - panX;
+        startY = e.touches[0].clientY - panY;
+      }
+    });
+
+    stage.addEventListener('touchmove', (e) => {
+      if (e.touches.length === 2 && initialPinchDistance) {
+        // Handle Pinch Gesture
+        const newDistance = getTouchDistance(e);
+        const factor = newDistance / initialPinchDistance;
+        currentZoom = Math.min(Math.max(1, currentZoom * (factor > 1 ? 1.03 : 0.97)), 3);
+        initialPinchDistance = newDistance;
+        applyTransform();
+      } else if (e.touches.length === 1 && isPanning && currentZoom > 1) {
+        // Handle Pan Gesture
+        panX = e.touches[0].clientX - startX;
+        panY = e.touches[0].clientY - startY;
+        applyTransform();
+      }
+    });
+
+    stage.addEventListener('touchend', (e) => {
+      if (e.touches.length < 2) initialPinchDistance = null;
+      if (e.touches.length === 0) {
+        isPanning = false;
+        stage.classList.remove('is-panning');
+      }
+    });
+
+    // Mouse Events for Desktop
+    stage.addEventListener('mousedown', (e) => {
       if (currentZoom <= 1) return;
       isPanning = true;
       stage.classList.add('is-panning');
-      
-      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-      
-      startX = clientX - panX;
-      startY = clientY - panY;
-    }
+      startX = e.clientX - panX;
+      startY = e.clientY - panY;
+    });
 
-    function movePan(e) {
+    window.addEventListener('mousemove', (e) => {
       if (!isPanning || currentZoom <= 1) return;
-      
-      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-      
-      panX = clientX - startX;
-      panY = clientY - startY;
-      
+      panX = e.clientX - startX;
+      panY = e.clientY - startY;
       applyTransform();
-    }
+    });
 
-    function endPan() {
+    window.addEventListener('mouseup', () => {
       isPanning = false;
       stage.classList.remove('is-panning');
-    }
-
-    stage.addEventListener('mousedown', startPan);
-    window.addEventListener('mousemove', movePan);
-    window.addEventListener('mouseup', endPan);
-
-    stage.addEventListener('touchstart', startPan, { passive: true });
-    window.addEventListener('touchmove', movePan, { passive: true });
-    window.addEventListener('touchend', endPan);
+    });
   </script>
 </body>
 </html>
