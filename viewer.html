@@ -2,7 +2,6 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <!-- Enabled user-scalable viewport for smooth touch/pinch zoom on mobile -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
   <title>MAKEROBOT MODULE READER</title>
   <!-- Page Flip JS Library -->
@@ -18,6 +17,7 @@
       height: 100vh;
       font-family: sans-serif;
       overflow: hidden;
+      user-select: none;
     }
 
     header {
@@ -64,17 +64,27 @@
       justify-content: center;
       align-items: center;
       background: radial-gradient(circle, #1f2937 0%, #0b0f19 100%);
-      overflow: auto; /* Allows panning when zoomed in */
+      overflow: hidden;
       position: relative;
+      cursor: default;
     }
 
-    /* Zoom wrapper for smooth scaling */
+    .book-stage.can-pan {
+      cursor: grab;
+    }
+
+    .book-stage.is-panning {
+      cursor: grabbing;
+    }
+
+    /* Zoom & Pan wrapper */
     #zoom-wrapper {
-      transition: transform 0.25s ease;
+      transition: transform 0.1s ease-out;
       transform-origin: center center;
       display: flex;
       justify-content: center;
       align-items: center;
+      will-change: transform;
     }
 
     /* Individual Page Container */
@@ -90,6 +100,7 @@
       width: 100%;
       height: 100%;
       object-fit: contain;
+      pointer-events: none; /* Prevents image drag ghosting */
     }
 
     /* Fixed Bottom Control Bar */
@@ -165,7 +176,7 @@
     <span id="page-counter">Page 1</span>
   </header>
 
-  <div class="book-stage">
+  <div class="book-stage" id="book-stage">
     <div id="zoom-wrapper">
       <div id="book"></div>
     </div>
@@ -192,6 +203,11 @@
   <script>
     let pageFlip;
     let currentZoom = 1;
+    let panX = 0;
+    let panY = 0;
+    let isPanning = false;
+    let startX = 0;
+    let startY = 0;
 
     const params = new URLSearchParams(window.location.search);
     const id = parseInt(params.get('id')) || 0;
@@ -208,7 +224,6 @@
         const page = document.createElement('div');
         page.className = 'page-sheet';
         
-        // Mark front cover and back cover as hard cover density
         if (idx === 0 || idx === tutorial.pages.length - 1) {
           page.setAttribute('data-density', 'hard');
         } else {
@@ -229,8 +244,8 @@
         width: pageWidth,
         height: pageHeight,
         size: 'fixed',
-        showCover: true,         // Front cover opens independently
-        usePortrait: false,       // Force 2-page side-by-side spread
+        showCover: true,         
+        usePortrait: false,       
         drawShadow: true,
         maxShadowOpacity: 0.6,
         mobileScrollSupport: true
@@ -255,23 +270,77 @@
       window.location.href = 'index.html';
     }
 
-    // --- ZOOM FUNCTIONS ---
+    // --- ZOOM & PAN LOGIC ---
+    const stage = document.getElementById('book-stage');
+
     function changeZoom(amount) {
-      currentZoom = Math.min(Math.max(0.75, currentZoom + amount), 2.5); // Limit zoom between 75% and 250%
-      applyZoom();
+      currentZoom = Math.min(Math.max(1, currentZoom + amount), 2.5); // Limit zoom between 100% and 250%
+      if (currentZoom === 1) {
+        panX = 0;
+        panY = 0;
+      }
+      applyTransform();
     }
 
     function resetZoom() {
       currentZoom = 1;
-      applyZoom();
+      panX = 0;
+      panY = 0;
+      applyTransform();
     }
 
-    function applyZoom() {
+    function applyTransform() {
       const zoomWrapper = document.getElementById('zoom-wrapper');
       const zoomText = document.getElementById('zoom-level');
-      zoomWrapper.style.transform = `scale(${currentZoom})`;
+      
+      zoomWrapper.style.transform = `translate(${panX}px, ${panY}px) scale(${currentZoom})`;
       zoomText.innerText = `${Math.round(currentZoom * 100)}%`;
+
+      if (currentZoom > 1) {
+        stage.classList.add('can-pan');
+      } else {
+        stage.classList.remove('can-pan', 'is-panning');
+      }
     }
+
+    // Mouse & Touch Pan Event Handlers
+    function startPan(e) {
+      if (currentZoom <= 1) return;
+      isPanning = true;
+      stage.classList.add('is-panning');
+      
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      
+      startX = clientX - panX;
+      startY = clientY - panY;
+    }
+
+    function movePan(e) {
+      if (!isPanning || currentZoom <= 1) return;
+      
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      
+      panX = clientX - startX;
+      panY = clientY - startY;
+      
+      applyTransform();
+    }
+
+    function endPan() {
+      isPanning = false;
+      stage.classList.remove('is-panning');
+    }
+
+    // Attach Pan Listeners
+    stage.addEventListener('mousedown', startPan);
+    window.addEventListener('mousemove', movePan);
+    window.addEventListener('mouseup', endPan);
+
+    stage.addEventListener('touchstart', startPan, { passive: true });
+    window.addEventListener('touchmove', movePan, { passive: true });
+    window.addEventListener('touchend', endPan);
   </script>
 </body>
 </html>
