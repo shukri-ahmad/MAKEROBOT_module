@@ -2,7 +2,8 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Enabled user-scalable viewport for smooth touch/pinch zoom on mobile -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
   <title>MAKEROBOT MODULE READER</title>
   <!-- Page Flip JS Library -->
   <script src="https://cdn.jsdelivr.net/npm/page-flip/dist/js/page-flip.browser.js"></script>
@@ -63,7 +64,17 @@
       justify-content: center;
       align-items: center;
       background: radial-gradient(circle, #1f2937 0%, #0b0f19 100%);
-      overflow: hidden;
+      overflow: auto; /* Allows panning when zoomed in */
+      position: relative;
+    }
+
+    /* Zoom wrapper for smooth scaling */
+    #zoom-wrapper {
+      transition: transform 0.25s ease;
+      transform-origin: center center;
+      display: flex;
+      justify-content: center;
+      align-items: center;
     }
 
     /* Individual Page Container */
@@ -88,16 +99,29 @@
       display: flex;
       justify-content: center;
       align-items: center;
-      gap: 20px;
+      gap: 15px;
       border-top: 1px solid #374151;
       z-index: 10;
+    }
+
+    .control-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .divider {
+      width: 1px;
+      height: 24px;
+      background: #4b5563;
+      margin: 0 5px;
     }
 
     .nav-btn {
       background: #2563eb;
       color: white;
       border: none;
-      padding: 8px 20px;
+      padding: 8px 16px;
       border-radius: 6px;
       cursor: pointer;
       font-weight: bold;
@@ -107,6 +131,29 @@
 
     .nav-btn:hover {
       background: #1d4ed8;
+    }
+
+    .zoom-btn {
+      background: #374151;
+      color: white;
+      border: none;
+      padding: 8px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: bold;
+      font-size: 0.9rem;
+      transition: background 0.2s;
+    }
+
+    .zoom-btn:hover {
+      background: #4b5563;
+    }
+
+    #zoom-level {
+      font-size: 0.85rem;
+      color: #d1d5db;
+      min-width: 45px;
+      text-align: center;
     }
   </style>
 </head>
@@ -119,16 +166,32 @@
   </header>
 
   <div class="book-stage">
-    <div id="book"></div>
+    <div id="zoom-wrapper">
+      <div id="book"></div>
+    </div>
   </div>
 
   <div class="footer-bar">
-    <button class="nav-btn" onclick="pageFlip.flipPrev()">← Previous</button>
-    <button class="nav-btn" onclick="pageFlip.flipNext()">Next →</button>
+    <!-- Page Navigation -->
+    <div class="control-group">
+      <button class="nav-btn" onclick="pageFlip.flipPrev()">← Previous</button>
+      <button class="nav-btn" onclick="pageFlip.flipNext()">Next →</button>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- Zoom Controls -->
+    <div class="control-group">
+      <button class="zoom-btn" onclick="changeZoom(-0.25)" title="Zoom Out">🔍 -</button>
+      <span id="zoom-level">100%</span>
+      <button class="zoom-btn" onclick="changeZoom(0.25)" title="Zoom In">🔍 +</button>
+      <button class="zoom-btn" onclick="resetZoom()" title="Reset Zoom">Reset</button>
+    </div>
   </div>
 
   <script>
     let pageFlip;
+    let currentZoom = 1;
 
     const params = new URLSearchParams(window.location.search);
     const id = parseInt(params.get('id')) || 0;
@@ -144,19 +207,20 @@
       tutorial.pages.forEach((pageUrl, idx) => {
         const page = document.createElement('div');
         page.className = 'page-sheet';
+        
         // Mark front cover and back cover as hard cover density
         if (idx === 0 || idx === tutorial.pages.length - 1) {
           page.setAttribute('data-density', 'hard');
         } else {
           page.setAttribute('data-density', 'soft');
         }
+        
         page.innerHTML = `<img src="${pageUrl}" alt="Page ${idx + 1}">`;
         bookContainer.appendChild(page);
       });
 
       // Calculate container fit dimensions
       const stageHeight = window.innerHeight - 130;
-      // Single page height and aspect ratio (A4 standard fit)
       const pageHeight = Math.min(stageHeight, 700);
       const pageWidth = Math.round(pageHeight * 0.707); 
 
@@ -166,7 +230,7 @@
         height: pageHeight,
         size: 'fixed',
         showCover: true,         // Front cover opens independently
-        usePortrait: false,       // Force 2-page side-by-side spread on desktop
+        usePortrait: false,       // Force 2-page side-by-side spread
         drawShadow: true,
         maxShadowOpacity: 0.6,
         mobileScrollSupport: true
@@ -189,6 +253,24 @@
 
     } else {
       window.location.href = 'index.html';
+    }
+
+    // --- ZOOM FUNCTIONS ---
+    function changeZoom(amount) {
+      currentZoom = Math.min(Math.max(0.75, currentZoom + amount), 2.5); // Limit zoom between 75% and 250%
+      applyZoom();
+    }
+
+    function resetZoom() {
+      currentZoom = 1;
+      applyZoom();
+    }
+
+    function applyZoom() {
+      const zoomWrapper = document.getElementById('zoom-wrapper');
+      const zoomText = document.getElementById('zoom-level');
+      zoomWrapper.style.transform = `scale(${currentZoom})`;
+      zoomText.innerText = `${Math.round(currentZoom * 100)}%`;
     }
   </script>
 </body>
