@@ -4,8 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
   <title>MAKEROBOT MODULE READER</title>
-  <!-- Page Flip JS Library -->
-  <script src="https://cdn.jsdelivr.net/npm/page-flip/dist/js/page-flip.browser.js"></script>
+  <!-- Swiper CSS & JS for identical 3D prev/next transitions -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
+  <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
   <style>
     * { box-sizing: border-box; }
     body {
@@ -99,19 +100,12 @@
       background: radial-gradient(circle, #1f2937 0%, #0b0f19 100%);
       overflow: hidden;
       position: relative;
-      cursor: default;
     }
 
-    .book-stage.can-pan {
-      cursor: grab;
-    }
-
-    .book-stage.is-panning {
-      cursor: grabbing;
-    }
-
-    /* Centered Zoom Container */
+    /* Zoom Wrapper */
     #zoom-wrapper {
+      width: 100%;
+      height: 100%;
       transition: transform 0.1s ease-out;
       transform-origin: 50% 50%;
       display: flex;
@@ -120,24 +114,29 @@
       will-change: transform;
     }
 
-    .page-sheet {
-      background-color: #ffffff;
+    /* Swiper Container Fit */
+    .swiper {
+      width: 100%;
+      height: 100%;
       display: flex;
       align-items: center;
       justify-content: center;
-      box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.15);
     }
 
-    .page-sheet img {
-      width: 100%;
-      height: 100%;
+    .swiper-slide {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 10px;
+    }
+
+    .swiper-slide img {
+      max-width: 100%;
+      max-height: 100%;
       object-fit: contain;
+      border-radius: 4px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.5);
       pointer-events: none;
-    }
-
-    /* Disable flipping interactions while zoomed or pinching */
-    .zoomed-no-flip {
-      pointer-events: none !important;
     }
 
     /* Semi-Transparent Floating Side Controls */
@@ -160,7 +159,7 @@
       align-items: center;
       z-index: 20;
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
-      transition: background 0.2s, transform 0.2s, opacity 0.2s;
+      transition: background 0.2s, transform 0.2s;
     }
 
     .side-nav-btn:hover {
@@ -169,13 +168,8 @@
       transform: translateY(-50%) scale(1.1);
     }
 
-    .side-nav-prev {
-      left: 15px;
-    }
-
-    .side-nav-next {
-      right: 15px;
-    }
+    .side-nav-prev { left: 15px; }
+    .side-nav-next { right: 15px; }
 
     /* Footer Controls */
     .footer-bar {
@@ -209,9 +203,7 @@
       transition: background 0.2s;
     }
 
-    .zoom-btn:hover {
-      background: #4b5563;
-    }
+    .zoom-btn:hover { background: #4b5563; }
 
     #zoom-level {
       font-size: 0.8rem;
@@ -235,12 +227,14 @@
   </header>
 
   <div class="book-stage" id="book-stage">
-    <!-- Floating Side Nav Buttons -->
-    <button class="side-nav-btn side-nav-prev" onclick="handleFlip('prev')" title="Previous Page">❮</button>
-    <button class="side-nav-btn side-nav-next" onclick="handleFlip('next')" title="Next Page">❯</button>
+    <!-- Semi-Transparent Floating Side Buttons -->
+    <button class="side-nav-btn side-nav-prev" onclick="swiper.slidePrev()" title="Previous Page">❮</button>
+    <button class="side-nav-btn side-nav-next" onclick="swiper.slideNext()" title="Next Page">❯</button>
 
     <div id="zoom-wrapper">
-      <div id="book"></div>
+      <div class="swiper" id="swiper-container">
+        <div class="swiper-wrapper" id="swiper-wrapper"></div>
+      </div>
     </div>
   </div>
 
@@ -254,7 +248,7 @@
   </div>
 
   <script>
-    let pageFlip;
+    let swiper;
     let currentZoom = 1;
     let panX = 0;
     let panY = 0;
@@ -263,7 +257,6 @@
     let startX = 0;
     let startY = 0;
     let initialPinchDistance = null;
-    let moduleMeta = { isLandscape: false, width: 3, height: 4 };
 
     const params = new URLSearchParams(window.location.search);
     const id = parseInt(params.get('id')) || 0;
@@ -273,106 +266,52 @@
 
     if (tutorial && tutorial.pages.length > 0) {
       document.getElementById('title').innerText = tutorial.title;
-      
-      const sampleImg = new Image();
-      sampleImg.src = tutorial.pages[0];
-
-      sampleImg.onload = function() {
-        moduleMeta.isLandscape = this.naturalWidth > this.naturalHeight;
-        moduleMeta.width = this.naturalWidth;
-        moduleMeta.height = this.naturalHeight;
-        initBookViewer();
-      };
-
-      sampleImg.onerror = function() {
-        initBookViewer();
-      };
-
+      initSwiperViewer();
     } else {
       window.location.href = 'index.html';
     }
 
-    function calculatePageDimensions() {
-      const stage = document.getElementById('book-stage');
-      const stageHeight = stage.clientHeight - 20;
-      const stageWidth = stage.clientWidth - 20;
-
-      const isMobile = window.innerWidth < 768;
-      let pageWidth, pageHeight;
-
-      if (isMobile) {
-        pageWidth = Math.min(stageWidth * 0.95, 480);
-        pageHeight = Math.min(stageHeight * 0.95, Math.round(pageWidth * (moduleMeta.height / moduleMeta.width)));
-      } else if (moduleMeta.isLandscape) {
-        pageHeight = Math.min(stageHeight * 0.92, 800);
-        pageWidth = Math.min(stageWidth * 0.95, Math.round(pageHeight * (moduleMeta.width / moduleMeta.height)));
-      } else {
-        pageHeight = Math.min(stageHeight * 0.92, 800);
-        pageWidth = Math.min(stageWidth * 0.9, Math.round(pageHeight * (moduleMeta.width / moduleMeta.height)));
-      }
-
-      return { pageWidth, pageHeight, isMobile };
-    }
-
-    function initBookViewer() {
-      const bookContainer = document.getElementById('book');
-      bookContainer.innerHTML = '';
+    function initSwiperViewer() {
+      const wrapper = document.getElementById('swiper-wrapper');
+      wrapper.innerHTML = '';
 
       tutorial.pages.forEach((pageUrl, idx) => {
-        const page = document.createElement('div');
-        page.className = 'page-sheet';
-        // Set soft density across all pages to ensure identical 3D paper bending
-        page.setAttribute('data-density', 'soft');
-        page.innerHTML = `<img src="${pageUrl}" alt="Page ${idx + 1}">`;
-        bookContainer.appendChild(page);
+        const slide = document.createElement('div');
+        slide.className = 'swiper-slide';
+        slide.innerHTML = `<img src="${pageUrl}" alt="Page ${idx + 1}">`;
+        wrapper.appendChild(slide);
       });
 
-      const { pageWidth, pageHeight } = calculatePageDimensions();
-
-      pageFlip = new St.PageFlip(bookContainer, {
-        width: pageWidth,
-        height: pageHeight,
-        size: 'fixed',
-        showCover: true,          // Required to maintain 3D curling animation mechanics
-        usePortrait: true,        // Single page rendering
-        drawShadow: true,
-        maxShadowOpacity: 0.6,
-        flippingTime: 600,
-        swipeDistance: 30,
-        mobileScrollSupport: true
-      });
-
-      pageFlip.loadFromHTML(document.querySelectorAll('.page-sheet'));
-
-      pageFlip.on('flip', (e) => {
-        const current = e.data + 1;
-        const total = tutorial.pages.length;
-        document.getElementById('page-counter').innerText = `Page ${current} of ${total}`;
+      // Initialize Swiper with 3D Creative/Flip Effect (Symmetrical Prev and Next)
+      swiper = new Swiper('#swiper-container', {
+        effect: 'creative',
+        speed: 400,
+        grabCursor: true,
+        creativeEffect: {
+          prev: {
+            shadow: true,
+            translate: ['-120%', 0, -500],
+            rotate: [0, 0, -20],
+          },
+          next: {
+            shadow: true,
+            translate: ['120%', 0, -500],
+            rotate: [0, 0, 20],
+          },
+        },
+        on: {
+          slideChange: function () {
+            const current = this.activeIndex + 1;
+            const total = tutorial.pages.length;
+            document.getElementById('page-counter').innerText = `Page ${current} of ${total}`;
+          }
+        }
       });
 
       window.addEventListener('keydown', (e) => {
-        if (e.key === 'ArrowLeft') handleFlip('prev');
-        if (e.key === 'ArrowRight') handleFlip('next');
+        if (e.key === 'ArrowLeft') swiper.slidePrev();
+        if (e.key === 'ArrowRight') swiper.slideNext();
       });
-    }
-
-    // Explicit 3D Curl Page Flip Handler
-    function handleFlip(direction) {
-      if (!pageFlip || currentZoom > 1) return;
-      
-      const current = pageFlip.getCurrentPageIndex();
-      
-      if (direction === 'prev') {
-        if (current > 0) {
-          // Explicitly target previous page index with top-left corner curl
-          pageFlip.flip(current - 1, 'top');
-        }
-      } else {
-        if (current < tutorial.pages.length - 1) {
-          // Explicitly target next page index with top-right corner curl
-          pageFlip.flip(current + 1, 'top');
-        }
-      }
     }
 
     // --- FULLSCREEN LOGIC ---
@@ -401,10 +340,7 @@
       }
 
       resetZoom();
-
-      if (pageFlip) {
-        pageFlip.updateFromHtml(document.querySelectorAll('.page-sheet'));
-      }
+      if (swiper) swiper.update();
     }
 
     document.addEventListener('fullscreenchange', updateLayoutSize);
@@ -434,7 +370,6 @@
     function applyTransform() {
       const zoomWrapper = document.getElementById('zoom-wrapper');
       const zoomText = document.getElementById('zoom-level');
-      const bookContainer = document.getElementById('book');
       
       if (currentZoom === 1 && !isPinching) {
         panX = 0;
@@ -445,11 +380,9 @@
       zoomText.innerText = `${Math.round(currentZoom * 100)}%`;
 
       if (currentZoom > 1 || isPinching) {
-        stage.classList.add('can-pan');
-        bookContainer.classList.add('zoomed-no-flip');
+        swiper.allowTouchMove = false; // Disable page swiping while zoomed in
       } else {
-        stage.classList.remove('can-pan', 'is-panning');
-        bookContainer.classList.remove('zoomed-no-flip');
+        swiper.allowTouchMove = true;  // Re-enable swiping at 100%
       }
     }
 
@@ -467,7 +400,6 @@
         applyTransform();
       } else if (e.touches.length === 1 && currentZoom > 1) {
         isPanning = true;
-        stage.classList.add('is-panning');
         startX = e.touches[0].clientX - panX;
         startY = e.touches[0].clientY - panY;
       }
@@ -489,13 +421,10 @@
     }, { passive: false });
 
     stage.addEventListener('touchend', (e) => {
-      if (e.touches.length < 2) {
-        initialPinchDistance = null;
-      }
+      if (e.touches.length < 2) initialPinchDistance = null;
       if (e.touches.length === 0) {
         isPanning = false;
         isPinching = false;
-        stage.classList.remove('is-panning');
         applyTransform();
       }
     });
@@ -503,7 +432,6 @@
     stage.addEventListener('mousedown', (e) => {
       if (currentZoom <= 1) return;
       isPanning = true;
-      stage.classList.add('is-panning');
       startX = e.clientX - panX;
       startY = e.clientY - panY;
     });
@@ -517,7 +445,6 @@
 
     window.addEventListener('mouseup', () => {
       isPanning = false;
-      stage.classList.remove('is-panning');
     });
   </script>
 </body>
